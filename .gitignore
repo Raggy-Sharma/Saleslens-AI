@@ -95,6 +95,4 @@ Thumbs.db
 
 # ---------- Project specific ----------
 *.docx
-*/*.DS_Store
-*/*.env
 *.xlsx
