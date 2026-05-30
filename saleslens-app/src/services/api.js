@@ -1,7 +1,7 @@
 import axios from 'axios';
 import baseUrl from '../../env.js';
 
-const api = axios.create({ baseURL: 'http://192.168.0.160:8000', timeout: 10000 });
+const api = axios.create({ baseURL: 'http://192.168.0.134:8000', timeout: 10000 });
 
 export const fetchSummary = () => api.get('/dashboard/summary');
 export const fetchTrend = (days = 7) => api.get(`/dashboard/trend?days=${days}`);
@@ -15,15 +15,3 @@ export const uploadExcel = (file) => {
 };
 
 export default api;
-
-
-// export const getDashboardSummary = async () => {
-//   try {
-//     const response = await api.get('/dashboard/summary');
-//     console.log('response', response.data);
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error fetching dashboard summary:', error);
-//     throw error;
-//   }
-// };

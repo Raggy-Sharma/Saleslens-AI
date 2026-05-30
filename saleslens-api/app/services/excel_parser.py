@@ -23,11 +23,12 @@ def safe_int(value) -> int:
     return int(safe_float(value))
 
 def parse_date_from_sheet_name(sheet_name: str) -> datetime.date:
+    name = sheet_name.strip().replace(".", "-")
     try:
-        return datetime.datetime.strptime(sheet_name.strip(), "%d-%m-%Y").date()
+        return datetime.datetime.strptime(name.strip(), "%d-%m-%Y").date()
     except ValueError:
         raise ExcelParseError(
-            f"Sheet name '{sheet_name}' is not in expected DD-MM-YYYY format"
+            f"Sheet name '{name}' is not in expected DD-MM-YYYY format"
         )
 
 def find_row_by_label(ws, label: str, search_range: range = range(1, 30)) -> int | None:
