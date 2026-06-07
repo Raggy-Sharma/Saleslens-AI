@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, Button, Alert, ActivityIndicator } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadExcel } from '../services/api';
+import { useNavigation } from '@react-navigation/native';
 
 export default function UploadScreen() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const navigation = useNavigation();
 
   const pickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -19,7 +21,7 @@ export default function UploadScreen() {
     setUploading(true);
     try {
       await uploadExcel({ uri: file.uri, name: file.name, type: file.mimeType });
-      Alert.alert('Success', 'File uploaded and processed');
+      navigation.navigate('Home', { reload: true });
       setFile(null);
     } catch (err) {
       Alert.alert('Error', err.response?.data?.detail || 'Upload failed');

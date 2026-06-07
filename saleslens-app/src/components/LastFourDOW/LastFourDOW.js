@@ -1,5 +1,5 @@
 import { Fragment, useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { Card } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { lastFourDOWStyles } from './LastFourDOW.styles';
@@ -61,40 +61,41 @@ function LastFourDOW() {
   const title = `Last 4 ${dayOfWeek}s`;
 
   return (
-    <View style={styles.container}>
-      <Card style={styles.card} mode="elevated" elevation={4}>
-        <Card.Content style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <View style={styles.row}>
-            {entries.map((entry, index) => {
-              const isLast = index === entries.length - 1;
-              const valueStyle = isLast ? { color: lastValueColor } : undefined;
-
-              return (
-                <Fragment key={entry.date ?? index}>
-                  {index > 0 ? (
-                    <MaterialCommunityIcons
-                      name="arrow-right"
-                      size={12}
-                      color={colors.text.secondary}
-                      style={styles.separator}
-                    />
-                  ) : null}
-                  <View style={styles.item}>
-                    <Text style={[styles.value, valueStyle]}>
-                      {formatIndianCurrency(entry.value)}
-                    </Text>
-                    <Text style={[styles.date, valueStyle]}>
-                      {formatShortDate(entry.date)}
-                    </Text>
-                  </View>
-                </Fragment>
-              );
-            })}
-          </View>
-        </Card.Content>
-      </Card>
-    </View>
+      <View style={styles.container}>
+        <Card style={styles.card} mode="elevated" elevation={4}>
+          <Card.Content style={styles.content}>
+            <Text style={styles.title}>{title}</Text>
+            <View style={styles.row}>
+              <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+                {entries.map((entry, index) => {
+                  const isLast = index === entries.length - 1;
+                  const valueStyle = isLast ? { color: lastValueColor } : undefined;
+                  return (
+                    <Fragment key={entry.date ?? index}>
+                      {index > 0 ? (
+                        <MaterialCommunityIcons
+                          name="arrow-right"
+                          size={12}
+                          color={colors.text.secondary}
+                          style={styles.separator}
+                        />
+                      ) : null}
+                      <View style={styles.item}>
+                        <Text style={[styles.value, valueStyle]}>
+                          {formatIndianCurrency(entry.value)}
+                        </Text>
+                        <Text style={[styles.date, valueStyle]}>
+                          {formatShortDate(entry.date)}
+                        </Text>
+                      </View>
+                    </Fragment>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </Card.Content>
+        </Card>
+      </View>
   );
 }
 

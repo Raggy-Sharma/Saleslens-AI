@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, extract
+from sqlalchemy import select, func, extract, delete
 from datetime import timedelta, datetime
 import calendar
 
 from app.db.session import get_db
-from app.models.models import DailySummary
+from app.models.models import DailySummary, DepartmentSales, PaymentMethod, Upload
 from app.models.schemas import (
     SummaryResponse, TrendResponse, TrendDataPoint,
     MTDResponse, SameDayHistoryResponse, SameDayDataPoint,
@@ -31,22 +31,23 @@ async def get_summary_for_date(db: AsyncSession, date: datetime):
 
 
 #Dashboard summary endpoint
-@router.get("/summary", response_model=SummaryResponse)
 # Returns the latest day's key metrics with a same-weekday comparison.
 # Finds the latest report date, fetches its summary, computes APC,
 # then looks back exactly 7 days to find the same weekday last week
 # and calculates the percentage change for net and gross sales.
 @router.get("/summary", response_model=SummaryResponse)
-async def dashboard_summary(db: AsyncSession = Depends(get_db)):
-    print("request recieved")
-    latest_date = await get_latest_date(db)
-    summary = await get_summary_for_date(db, latest_date)
+async def dashboard_summary(
+    date: datetime = None,
+    db: AsyncSession = Depends(get_db)
+):
+    target_date = date if date else await get_latest_date(db)
+    summary = await get_summary_for_date(db, target_date)
 
-    weekday_name = latest_date.strftime("%A")  # e.g., "Friday"
+    weekday_name = target_date.strftime("%A")  # e.g., "Friday"
     apc = summary.net_sales / summary.foot_fall if summary.foot_fall > 0 else None
 
     # Find same weekday last week
-    last_weekday_date = latest_date - timedelta(days=7)
+    last_weekday_date = target_date - timedelta(days=7)
     print(f"last_weekday_date: {last_weekday_date}")
     last_weekday = await get_summary_for_date(db, last_weekday_date)
 
@@ -64,7 +65,7 @@ async def dashboard_summary(db: AsyncSession = Depends(get_db)):
         vs_last_transactions = round(((summary.transactions - last_weekday.transactions) / last_weekday.transactions) * 100, 1)
     print(f"vs_last_gross: {vs_last_gross}")
     return SummaryResponse(
-        report_date=latest_date,
+        report_date=target_date,
         day_of_week=weekday_name,
         net_sales=summary.net_sales,
         gross_sales=summary.gross_sales,
@@ -212,6 +213,17 @@ async def dashboard_weekday_average(db: AsyncSession = Depends(get_db)):
     )
 
     
+@router.delete("/delete") 
+async def delete_data_for_date(date: datetime, db: AsyncSession = Depends(get_db)):
+    print(f"date: {date}")
+    dailSummary = await db.execute(select(DailySummary).where(DailySummary.date == date))
+    print(f"dailSummary: {dailSummary}")
+    await db.execute(delete(DailySummary).where(DailySummary.date == date))
+    await db.execute(delete(DepartmentSales).where(DepartmentSales.date == date))
+    await db.execute(delete(PaymentMethod).where(PaymentMethod.date == date))
+    await db.execute(delete(Upload).where(Upload.report_date == date))
+    await db.commit()
+    return {"message": "Data for {date} deleted successfully"}
 
 
 

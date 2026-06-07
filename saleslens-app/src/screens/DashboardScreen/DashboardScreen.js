@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import { View, Text, ActivityIndicator, Switch, ScrollView } from 'react-native';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, ActivityIndicator, Switch, ScrollView, RefreshControl } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useDashboardStore from '../../store/useDashboardStore';
 import { fetchSummary, fetchTrend, fetchMTD, fetchSameDayHistory, fetchWeekdayAverage } from '../../services/api';
@@ -16,6 +17,7 @@ import { formatIndianCurrency, formatIndianNumber } from '../../utils/formatNumb
 export default function DashboardScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createDashboardScreenStyles(colors), [colors]);
+  const [refreshing, setRefreshing] = useState(false);
   const {
     summary,
     loading,
@@ -31,10 +33,45 @@ export default function DashboardScreen() {
     setLoading,
     setError,
   } = useDashboardStore();
+  const route = useRoute();
+
+  const loadDashboard = useCallback(async ({ showLoader = true } = {}) => {
+    if (showLoader) setLoading(true);
+    try {
+      const [summaryRes, trendRes, mtdRes, historyRes, avgRes] = await Promise.all([
+        fetchSummary(), fetchTrend(7), fetchMTD(), fetchSameDayHistory(4), fetchWeekdayAverage(),
+      ]);
+      setSummary(summaryRes.data);
+      setTrend(trendRes.data);
+      setMTD(mtdRes.data);
+      setSameDayHistory(historyRes.data);
+      console.log(historyRes.data);
+      setWeekdayAverage(avgRes.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  }, [setLoading, setSummary, setTrend, setMTD, setSameDayHistory, setWeekdayAverage, setError]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadDashboard({ showLoader: false });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDashboard]);
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    if (route.params?.reload) {
+      onRefresh();
+    }
+  }, [route.params?.reload, onRefresh]);
 
   const detailCards = useMemo(() => {
     if (!summary) return [];
@@ -83,25 +120,6 @@ export default function DashboardScreen() {
     ];
   }, [summary, salesType, salesTypeLabel, weekdayAverage]);
 
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const [summaryRes, trendRes, mtdRes, historyRes, avgRes] = await Promise.all([
-        fetchSummary(), fetchTrend(7), fetchMTD(), fetchSameDayHistory(4), fetchWeekdayAverage(),
-      ]);
-      setSummary(summaryRes.data);
-      setTrend(trendRes.data);
-      setMTD(mtdRes.data);
-      setSameDayHistory(historyRes.data);
-      console.log(historyRes.data);
-      setWeekdayAverage(avgRes.data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {loading ? (
@@ -114,6 +132,9 @@ export default function DashboardScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           <View style={styles.headerContainer}>
             <Text style={styles.title}>{summary?.report_date || 'No data'}</Text>
